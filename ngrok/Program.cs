@@ -22,8 +22,6 @@ using (var process = new Process
         process.StandardInput.Write(@"ngrok tunnel --label edge=edghts_2PzZulUqyinuNeuIZXlF16SS1rk http://localhost:80" + Environment.NewLine);
         process.StandardInput.Close();
         process.WaitForExit();
-
-        GC.Collect();
     }
     else
     {
@@ -32,31 +30,33 @@ using (var process = new Process
 }
 using (var regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true))
 {
-    var assembly = Assembly.GetEntryAssembly();
+    if (Assembly.GetEntryAssembly() is Assembly assembly)
+    {
+        var program = assembly.GetName().Name;
 
-    var program = assembly?.GetName().Name;
-
-    var fileName = string.Concat(assembly?.ManifestModule.Name[..^4], ".exe");
-
-    if (regKey != null && string.IsNullOrEmpty(program) is false)
-        try
-        {
-            Console.WriteLine("'Y'를 입력하면 시작프로그램에 등록합니다.");
-
-            ConsoleKeyInfo info = Console.ReadKey();
-
-            if (ConsoleKey.Y == info.Key && string.IsNullOrEmpty(fileName) is false && regKey.GetValue(program) is null)
+        if (regKey != null && string.IsNullOrEmpty(program) is false)
+            try
             {
-                regKey.SetValue(program, Path.Combine(Environment.CurrentDirectory, fileName));
+                var fileName = string.Concat(assembly.ManifestModule.Name[..^4], ".exe");
+
+                Console.WriteLine("'Y'를 입력하면 시작프로그램에 등록합니다.");
+
+                if (ConsoleKey.Y == Console.ReadKey().Key)
+                {
+                    if (regKey.GetValue(program) is null && string.IsNullOrEmpty(fileName) is false)
+                    {
+                        regKey.SetValue(program, Path.Combine(Environment.CurrentDirectory, fileName));
+                    }
+                }
+                else
+                {
+                    regKey.DeleteValue(program, false);
+                }
+                regKey.Close();
             }
-            else
+            catch (Exception ex)
             {
-                regKey.DeleteValue(program, false);
+                Console.WriteLine(ex.Message);
             }
-            regKey.Close();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
+    }
 }
