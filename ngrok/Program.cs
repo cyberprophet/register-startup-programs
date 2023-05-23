@@ -2,32 +2,6 @@
 using System.Diagnostics;
 using System.Reflection;
 
-using (var process = new Process
-{
-    StartInfo = new ProcessStartInfo
-    {
-        WorkingDirectory = "C:\\",
-        Verb = "runas",
-        FileName = "cmd",
-        UseShellExecute = false,
-        RedirectStandardInput = true,
-        RedirectStandardOutput = true,
-        CreateNoWindow = true
-    }
-})
-{
-    if (process.Start())
-    {
-        process.BeginOutputReadLine();
-        process.StandardInput.Write(@"ngrok tunnel --label edge=edghts_2PzZulUqyinuNeuIZXlF16SS1rk http://localhost:80" + Environment.NewLine);
-        process.StandardInput.Close();
-        process.WaitForExit();
-    }
-    else
-    {
-        Console.WriteLine("failed");
-    }
-}
 using (var regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true))
 {
     if (Assembly.GetEntryAssembly() is Assembly assembly)
@@ -39,19 +13,16 @@ using (var regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Window
             {
                 var fileName = string.Concat(assembly.ManifestModule.Name[..^4], ".exe");
 
-                Console.WriteLine("'Y'를 입력하면 시작프로그램에 등록합니다.");
-
-                if (ConsoleKey.Y == Console.ReadKey().Key)
+                if (regKey.GetValue(program) is null && string.IsNullOrEmpty(fileName) is false)
                 {
-                    if (regKey.GetValue(program) is null && string.IsNullOrEmpty(fileName) is false)
-                    {
-                        regKey.SetValue(program, Path.Combine(Environment.CurrentDirectory, fileName));
-                    }
+                    regKey.SetValue(program, Path.Combine(Environment.CurrentDirectory, fileName));
                 }
+                /*
                 else
                 {
                     regKey.DeleteValue(program, false);
                 }
+                */
                 regKey.Close();
             }
             catch (Exception ex)
@@ -59,4 +30,54 @@ using (var regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Window
                 Console.WriteLine(ex.Message);
             }
     }
+}
+using (var process = new Process
+{
+    StartInfo = new ProcessStartInfo
+    {
+        WorkingDirectory = "C:\\dev\\nginx-1.22.0",
+        Verb = "runas",
+        FileName = "nginx.exe",
+        UseShellExecute = true
+    }
+})
+{
+    if (process.Start())
+    {
+        Console.WriteLine("nginx");
+    }
+    else
+    {
+        Console.WriteLine("failed");
+    }
+}
+using (var process = new Process
+{
+    StartInfo = new ProcessStartInfo
+    {
+        WorkingDirectory = "C:\\",
+        Verb = "runas",
+        FileName = "pwsh",
+        UseShellExecute = false,
+        RedirectStandardInput = true,
+        RedirectStandardOutput = true,
+        CreateNoWindow = true
+    }
+})
+{
+    process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+    process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+
+    if (process.Start())
+    {
+        process.BeginOutputReadLine();
+        process.StandardInput.Write(@"ngrok tunnel --label edge=edghts_2PzZulUqyinuNeuIZXlF16SS1rk http://localhost:80" + Environment.NewLine);
+        process.StandardInput.Close();
+        process.WaitForExit();
+    }
+    else
+    {
+        Console.WriteLine("failed");
+    }
+    Console.WriteLine("ngrok");
 }
